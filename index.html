@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seções com Local de Votação Alterado — 2º turno 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#f3f1ea; --surface:#ffffff; --ink:#1f2a24; --ink-soft:#56635c;
+  --line:#dcd6c6; --accent:#2f6f5e; --accent-soft:#e3ece7; --warn:#9a6b1f; --warn-soft:#f3e8d4;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15191a; --surface:#1d2322; --ink:#eaf0ec; --ink-soft:#9fb0a7;
+    --line:#2d3533; --accent:#62c7a8; --accent-soft:#1f3630; --warn:#d9ad67; --warn-soft:#352b17;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:0 16px}
+h1,h2,h3{font-family:system-ui,sans-serif;margin:0}
+.wrap{max-width:1160px;margin:0 auto;padding:20px 0 48px}
+header.top{padding:4px 0 18px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.eyebrow{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+h1{font-size:clamp(22px,4vw,32px);line-height:1.15;margin-top:6px}
+.sub{color:var(--ink-soft);margin-top:8px;max-width:640px;font-size:15px;line-height:1.5}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:130px}
+.stat .n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.notice{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);border:1px solid var(--warn);border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13.5px;line-height:1.5}
+.notice b{color:var(--warn)}
+.panels{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:22px}
+@media (max-width:820px){.panels{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.card .hd{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card .hd h2{font-size:15px}
+.card .hd .hint{font-size:12px;color:var(--ink-soft)}
+#map{height:460px;width:100%;background:var(--accent-soft)}
+#mapStatus{font-size:12px;color:var(--ink-soft);padding:6px 16px;display:none}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--ink)}
+button.linklike{background:var(--accent-soft);color:var(--accent);border:none;border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer;font-weight:600}
+.drill{padding:14px 16px;max-height:460px;overflow-y:auto}
+.drill-empty{color:var(--ink-soft);font-size:13.5px;line-height:1.6;padding:6px 0}
+.breadcrumb{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;margin-bottom:10px}
+.breadcrumb span.sep{color:var(--ink-soft)}
+.row-list{display:flex;flex-direction:column;gap:2px}
+.row-btn{display:flex;justify-content:space-between;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:none;border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--ink);font-size:13.5px}
+.row-btn:hover{background:var(--accent-soft)}
+.row-btn .n{font-variant-numeric:tabular-nums;color:var(--ink-soft);font-size:12.5px;white-space:nowrap}
+.row-btn.nochange{color:var(--ink-soft)}
+.sec-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px}
+.sec-item .meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);margin-bottom:6px;font-variant-numeric:tabular-nums}
+.sec-item .chip{background:var(--accent-soft);color:var(--accent);border-radius:5px;padding:1px 6px;font-weight:600}
+.locs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;min-width:0}
+.locs .loc{min-width:0;overflow-wrap:break-word}
+.locs .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:2px}
+section.search{margin-top:22px}
+.search-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.search-bar input,.search-bar select{font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);min-width:0}
+.search-bar input{flex:1 1 240px}
+.search-bar select{flex:0 1 160px}
+.result-count{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+thead th{text-align:left;padding:10px 12px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em}
+tbody td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+tbody tr:hover{background:var(--accent-soft)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:10px 4px;font-size:12.5px;color:var(--ink-soft)}
+.pager button{background:var(--accent-soft);color:var(--accent);border:none;border-radius:7px;padding:6px 12px;font-weight:600;cursor:pointer;font-size:12.5px}
+.pager button:disabled{opacity:.4;cursor:default}
+footer{margin-top:28px;font-size:12px;color:var(--ink-soft);line-height:1.6;border-top:1px solid var(--line);padding-top:16px;max-width:1160px;margin-inline:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">2º turno · eleições 2026</div>
+    <h1>Seções com local de votação alterado</h1>
+    <p class="sub">Entre o 1º e o 2º turno, a Justiça Eleitoral trocou o local de votação de milhares de seções em todo o país. Use o mapa ou a busca para ver se a sua mudou — e para onde.</p>
+    <div class="stats" id="stats"></div>
+    <div class="notice"><span>&#9432;</span><div><b>Mudar de local é rotina.</b> Isso acontece todo turno por motivos administrativos — prédio interditado, risco de segurança, fim de convênio com a escola, reforma, etc. Esta página não tem relação com resultado de votação; mostra só local antigo e novo, para cada seção alterada no país inteiro.</div></div>
+  </header>
+
+  <div class="panels">
+    <div class="card">
+      <div class="hd">
+        <h2 id="mapTitle">Mapa do Brasil por estado</h2>
+        <button class="linklike" id="resetMap" style="display:none">&larr; Voltar ao Brasil</button>
+      </div>
+      <div id="map"></div>
+      <div id="mapStatus"></div>
+    </div>
+    <div class="card">
+      <div class="hd"><h2 id="drillTitle">Clique num estado</h2><span class="hint" id="drillHint"></span></div>
+      <div class="drill" id="drill"><div class="drill-empty">Clique em um estado no mapa para ver seus municípios. Clique num município para ver as seções alteradas ali.</div></div>
+    </div>
+  </div>
+
+  <section class="search">
+    <div class="card">
+      <div class="hd"><h2>Buscar sua seção</h2><span class="hint">por município, UF, zona, seção ou nome do local</span></div>
+      <div style="padding:16px">
+        <div class="search-bar">
+          <input id="q" type="text" placeholder="ex.: Delmiro Gouveia, PE, escola municipal..." autocomplete="off">
+          <select id="ufFilter"><option value="">Todas as UFs</option></select>
+        </div>
+        <div class="result-count" id="resultCount"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>UF</th><th>Município</th><th>Zona</th><th>Seção</th><th>Local no 1º turno</th><th>Local no 2º turno</th><th>Eleitores</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span id="pageInfo"></span>
+          <div style="display:flex;gap:8px">
+            <button id="prevPage">Anterior</button>
+            <button id="nextPage">Próxima</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Fonte dos dados de seções: Tribunal Superior Eleitoral (TSE) — seções eleitorais com local de votação alterado entre o 1º e o 2º turno, eleições 2026 (baixado em outubro de 2026). Contornos de estados e municípios: API de Malhas Geográficas do IBGE (servicodados.ibge.gov.br), carregados em tempo real pelo navegador. Esta página é uma ferramenta de orientação ao eleitor, sem vínculo com candidaturas ou campanhas.
+  </footer>
+</div>
+
+<script>
+const UF_NOME = {AC:'Acre',AL:'Alagoas',AP:'Amapá',AM:'Amazonas',BA:'Bahia',CE:'Ceará',DF:'Distrito Federal',ES:'Espírito Santo',GO:'Goiás',MA:'Maranhão',MT:'Mato Grosso',MS:'Mato Grosso do Sul',MG:'Minas Gerais',PA:'Pará',PB:'Paraíba',PR:'Paraná',PE:'Pernambuco',PI:'Piauí',RJ:'Rio de Janeiro',RN:'Rio Grande do Norte',RS:'Rio Grande do Sul',RO:'Rondônia',RR:'Roraima',SC:'Santa Catarina',SP:'São Paulo',SE:'Sergipe',TO:'Tocantins'};
+// IBGE numeric UF code -> sigla (codarea returned by the malhas API)
+const UFCODE_SIGLA = {'12':'AC','27':'AL','16':'AP','13':'AM','29':'BA','23':'CE','53':'DF','32':'ES','52':'GO','21':'MA','51':'MT','50':'MS','31':'MG','15':'PA','25':'PB','41':'PR','26':'PE','22':'PI','33':'RJ','24':'RN','43':'RS','11':'RO','14':'RR','42':'SC','35':'SP','28':'SE','17':'TO'};
+
+const fmt = n => n.toLocaleString('pt-BR');
+function normName(s){
+  return String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let DATA = null;
+const mapStatus = document.getElementById('mapStatus');
+function setMapStatus(msg, show){ mapStatus.textContent = msg; mapStatus.style.display = show ? 'block' : 'none'; }
+
+fetch('tse_mudancas_2026.json').then(r => {
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}).then(d => { DATA = d; initPage(); }).catch(err => {
+  document.getElementById('stats').innerHTML = '<div class="stat"><div class="l" style="color:var(--warn)">Não foi possível carregar tse_mudancas_2026.json. Verifique se o arquivo está na mesma pasta que esta página. (' + escapeHtml(err.message) + ')</div></div>';
+});
+
+function initPage(){
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${fmt(DATA.meta.total_secoes)}</div><div class="l">seções alteradas</div></div>
+    <div class="stat"><div class="n">${fmt(DATA.meta.total_municipios)}</div><div class="l">municípios</div></div>
+    <div class="stat"><div class="n">${fmt(DATA.meta.total_ufs)}</div><div class="l">UFs</div></div>
+    <div class="stat"><div class="n">${fmt(DATA.meta.total_eleitores)}</div><div class="l">eleitores afetados</div></div>
+  `;
+
+  const ufStats = {};
+  DATA.ufs.forEach(u => ufStats[u.uf] = u);
+  const munByUf = {};
+  DATA.municipios.forEach(m => { (munByUf[m.uf] ||= []).push(m); });
+  const secByUfMun = {};
+  DATA.secoes.forEach(s => { const k = s.uf+'|'+normName(s.mun); (secByUfMun[k] ||= []).push(s); });
+
+  const ufSelect = document.getElementById('ufFilter');
+  Object.keys(UF_NOME).sort().forEach(uf=>{
+    const opt = document.createElement('option');
+    opt.value = uf; opt.textContent = `${uf} — ${UF_NOME[uf]}`;
+    ufSelect.appendChild(opt);
+  });
+
+  const maxUfEleitores = Math.max(1, ...DATA.ufs.map(u => u.eleitores));
+  function ufColor(uf){
+    const u = ufStats[uf];
+    if(!u) return '#9aa39c';
+    const t = Math.sqrt(u.eleitores / maxUfEleitores);
+    return t; // used as opacity below
+  }
+
+  // ---- Leaflet map ----
+  const map = L.map('map', {scrollWheelZoom:false, worldCopyJump:false}).setView([-14.2,-51.9], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 11, minZoom: 3
+  }).addTo(map);
+
+  let ufLayer = null, munLayer = null;
+  const drill = document.getElementById('drill');
+  const drillTitle = document.getElementById('drillTitle');
+  const drillHint = document.getElementById('drillHint');
+  const mapTitle = document.getElementById('mapTitle');
+  const resetBtn = document.getElementById('resetMap');
+
+  function clearDrill(){
+    drillTitle.textContent = 'Clique num estado';
+    drillHint.textContent = '';
+    drill.innerHTML = '<div class="drill-empty">Clique em um estado no mapa para ver seus municípios. Clique num município para ver as seções alteradas ali.</div>';
+  }
+
+  function loadOverview(){
+    mapTitle.textContent = 'Mapa do Brasil por estado';
+    resetBtn.style.display = 'none';
+    if(munLayer){ map.removeLayer(munLayer); munLayer = null; }
+    map.setView([-14.2,-51.9], 4);
+    clearDrill();
+    if(ufLayer){ ufLayer.addTo(map); return; }
+    setMapStatus('Carregando contornos dos estados (IBGE)…', true);
+    fetch('https://servicodados.ibge.gov.br/api/v4/malhas/paises/BR?intrarregiao=UF&qualidade=minima&formato=application/vnd.geo+json')
+      .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(geo => {
+        setMapStatus('', false);
+        ufLayer = L.geoJSON(geo, {
+          style: f => {
+            const uf = UFCODE_SIGLA[f.properties.codarea];
+            const u = ufStats[uf];
+            return {
+              color:'#2f6f5e', weight:1, fillColor:'#2f6f5e',
+              fillOpacity: u ? 0.15 + 0.55*ufColor(uf) : 0.04
+            };
+          },
+          onEachFeature: (f, layer) => {
+            const uf = UFCODE_SIGLA[f.properties.codarea];
+            const u = ufStats[uf];
+            const nome = UF_NOME[uf] || uf || '?';
+            layer.bindTooltip(u ? `${nome}: ${fmt(u.secoes)} seções · ${fmt(u.eleitores)} eleitores` : `${nome}: sem seções alteradas`);
+            layer.on({
+              mouseover: () => layer.setStyle({weight:2.5}),
+              mouseout: () => layer.setStyle({weight:1}),
+              click: () => { if(uf) openUf(uf, layer); }
+            });
+          }
+        }).addTo(map);
+      })
+      .catch(err => {
+        setMapStatus('Não foi possível carregar o mapa-base do IBGE agora (' + err.message + '). A busca abaixo continua funcionando normalmente.', true);
+      });
+  }
+
+  function openUf(uf, ufFeatureLayer){
+    const nome = UF_NOME[uf] || uf;
+    mapTitle.textContent = nome;
+    resetBtn.style.display = 'inline-block';
+    if(ufLayer) map.removeLayer(ufLayer);
+    if(ufFeatureLayer && ufFeatureLayer.getBounds) map.fitBounds(ufFeatureLayer.getBounds(), {maxZoom:8});
+
+    showUfDrill(uf);
+
+    setMapStatus('Carregando municípios de ' + nome + ' (IBGE)…', true);
+    Promise.all([
+      fetch(`https://servicodados.ibge.gov.br/api/v4/malhas/estados/${uf}?intrarregiao=municipio&qualidade=minima&formato=application/vnd.geo+json`).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),
+      fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    ]).then(([geo, lista]) => {
+      setMapStatus('', false);
+      const nameByCode = {};
+      lista.forEach(m => nameByCode[String(m.id)] = m.nome);
+      const changed = {};
+      (munByUf[uf]||[]).forEach(m => changed[normName(m.mun)] = m);
+
+      if(munLayer) map.removeLayer(munLayer);
+      munLayer = L.geoJSON(geo, {
+        style: f => {
+          const nome2 = nameByCode[f.properties.codarea];
+          const hit = nome2 && changed[normName(nome2)];
+          return { color:'#2f6f5e', weight:1, fillColor: hit?'#2f6f5e':'#9aa39c', fillOpacity: hit?0.5:0.08 };
+        },
+        onEachFeature: (f, layer) => {
+          const nome2 = nameByCode[f.properties.codarea] || '?';
+          const hit = changed[normName(nome2)];
+          layer.bindTooltip(hit ? `${nome2}: ${fmt(hit.secoes)} seções alteradas` : `${nome2}: sem alteração registrada`);
+          layer.on({
+            mouseover: () => layer.setStyle({weight:2.5}),
+            mouseout: () => layer.setStyle({weight:1}),
+            click: () => showMunDrill(uf, nome2)
+          });
+        }
+      }).addTo(map);
+    }).catch(err => {
+      setMapStatus('Não foi possível carregar os municípios de ' + nome + ' agora (' + err.message + '). Use a lista ao lado ou a busca abaixo.', true);
+    });
+  }
+
+  function showUfDrill(uf){
+    const u = ufStats[uf];
+    const nome = UF_NOME[uf] || uf;
+    drillTitle.textContent = `${nome} (${uf})`;
+    drillHint.textContent = u ? `${fmt(u.secoes)} seções` : 'sem seções alteradas';
+    const muns = (munByUf[uf]||[]).slice().sort((a,b)=>b.secoes-a.secoes);
+    let html = `<div class="breadcrumb"><button class="linklike" id="toOverview">Todos os estados</button><span class="sep">›</span><span>${nome}</span></div>`;
+    if(muns.length === 0){
+      html += '<div class="drill-empty">Nenhuma seção alterada registrada neste estado.</div>';
+    } else {
+      html += '<div class="row-list">';
+      muns.forEach(m=>{
+        html += `<button class="row-btn" data-uf="${uf}" data-mun="${escapeHtml(m.mun)}">
+          <span>${escapeHtml(m.mun)}</span><span class="n">${fmt(m.secoes)} seções · ${fmt(m.eleitores)} eleit.</span>
+        </button>`;
+      });
+      html += '</div>';
+    }
+    drill.innerHTML = html;
+    wireDrillButtons();
+  }
+
+  function showMunDrill(uf, mun){
+    const nome = UF_NOME[uf] || uf;
+    const secs = (secByUfMun[uf+'|'+normName(mun)]||[]).slice().sort((a,b)=>a.zona-b.zona || a.secao-b.secao);
+    drillTitle.textContent = mun;
+    drillHint.textContent = secs.length ? `${fmt(secs.length)} seções` : 'sem alteração registrada';
+    let html = `<div class="breadcrumb"><button class="linklike" id="toOverview">Todos os estados</button><span class="sep">›</span><button class="linklike" data-uf="${uf}" id="toUf">${nome}</button><span class="sep">›</span><span>${escapeHtml(mun)}</span></div>`;
+    if(secs.length === 0){
+      html += '<div class="drill-empty">Nenhuma seção alterada registrada neste município.</div>';
+    } else {
+      secs.forEach(s=>{
+        html += `<div class="sec-item">
+          <div class="meta"><span class="chip">Zona ${s.zona}</span><span class="chip">Seção ${s.secao}</span><span>${fmt(s.eleitores)} eleitores</span></div>
+          <div class="locs">
+            <div class="loc"><span class="lbl">1º turno</span>${escapeHtml(s.local_i)}</div>
+            <div class="loc" style="text-align:center;color:var(--ink-soft)">&rarr;</div>
+            <div class="loc"><span class="lbl">2º turno</span>${escapeHtml(s.local_f)}</div>
+          </div>
+        </div>`;
+      });
+    }
+    drill.innerHTML = html;
+    wireDrillButtons();
+  }
+
+  function wireDrillButtons(){
+    const toOverview = document.getElementById('toOverview');
+    if(toOverview) toOverview.addEventListener('click', loadOverview);
+    const toUf = document.getElementById('toUf');
+    if(toUf) toUf.addEventListener('click', () => openUf(toUf.dataset.uf, null));
+    drill.querySelectorAll('.row-btn[data-mun]').forEach(btn => {
+      btn.addEventListener('click', () => showMunDrill(btn.dataset.uf, btn.dataset.mun));
+    });
+  }
+
+  resetBtn.addEventListener('click', loadOverview);
+  loadOverview();
+
+  // ---- search table ----
+  const q = document.getElementById('q');
+  const tbody = document.getElementById('tbody');
+  const resultCount = document.getElementById('resultCount');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+  const PAGE_SIZE = 25;
+  let page = 0;
+  let filtered = DATA.secoes;
+
+  function applyFilter(){
+    const term = normName(q.value.trim());
+    const uf = ufSelect.value;
+    filtered = DATA.secoes.filter(s => {
+      if (uf && s.uf !== uf) return false;
+      if (!term) return true;
+      return normName(s.mun).includes(term) || normName(s.local_i).includes(term) || normName(s.local_f).includes(term)
+        || normName(s.uf).includes(term) || String(s.zona).includes(term) || String(s.secao).includes(term);
+    });
+    page = 0;
+    renderPage();
+  }
+
+  function renderPage(){
+    const start = page * PAGE_SIZE;
+    const rows = filtered.slice(start, start + PAGE_SIZE);
+    resultCount.textContent = `${fmt(filtered.length)} seções encontradas`;
+    tbody.innerHTML = rows.map(s => `<tr>
+      <td>${s.uf}</td><td>${escapeHtml(s.mun)}</td><td class="num">${s.zona}</td><td class="num">${s.secao}</td>
+      <td>${escapeHtml(s.local_i)}</td><td>${escapeHtml(s.local_f)}</td><td class="num">${fmt(s.eleitores)}</td>
+    </tr>`).join('') || `<tr><td colspan="7" style="color:var(--ink-soft);padding:20px;text-align:center">Nenhuma seção encontrada.</td></tr>`;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    pageInfo.textContent = `Página ${page+1} de ${totalPages}`;
+    prevBtn.disabled = page === 0;
+    nextBtn.disabled = page >= totalPages - 1;
+  }
+
+  q.addEventListener('input', applyFilter);
+  ufSelect.addEventListener('change', applyFilter);
+  prevBtn.addEventListener('click', ()=>{ if(page>0){page--; renderPage();} });
+  nextBtn.addEventListener('click', ()=>{ const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE)); if(page<totalPages-1){page++; renderPage();} });
+
+  renderPage();
+}
+</script>
+</body>
+</html>
